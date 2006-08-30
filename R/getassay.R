@@ -270,6 +270,9 @@ get.assay <- function(aid, quiet=TRUE) {
     }
   }
 
+  startDocument <- function() {
+  }
+  
   list(startElement=startElement, endElement=endElement, text=text,
        endDocument=endDocument, startDocument=startDocument, data=function() {tmpdata})
 }
