@@ -20,6 +20,21 @@ require(car)
   }
   unlist(nx)
 }
+
+.gunzip <- function(iname, oname) {
+  icon <- gzfile(iname, open='r')
+  ocon <- file(oname, open='w')
+  while (TRUE) {
+    lines <-readLines(icon, n=100)
+    if (length(lines) == 0) break
+    lines <- paste(lines, sep='', collapse='\n')
+    writeLines(lines, con = ocon)
+  }
+  file.remove(iname)
+  close(icon)
+  close(ocon)
+}
+
 get.assay.desc <- function(aid) {
   descURL <- 'ftp://ftp.ncbi.nlm.nih.gov/pubchem/Bioassay/CSV/Description/'
   url <- paste(descURL,aid,'.descr.xml.gz', sep='', collapse='')  
@@ -32,11 +47,9 @@ get.assay.desc <- function(aid) {
   if (class(status) == 'try-error') {
     return(NULL)
   }
-  
-  cmd <- paste('gzip -d ', tmpdest, sep='',collapse='')
-  system(cmd)
 
-  xmlfile <- strsplit(tmpdest, '\\.')[[1]][1]  
+  xmlfile <- strsplit(tmpdest, '\\.')[[1]][1]
+  .gunzip(tmpdest, xmlfile)
   xml <- xmlTreeParse(xmlfile, asTree=TRUE)
   root <- xmlRoot(xml)
 
@@ -146,14 +159,12 @@ get.assay <- function(aid, quiet=TRUE) {
   if (class(status) == 'try-error') {
     stop("Error in the download")
   }
-
   if (!quiet) cat("Got data file\n")
 
-  cmd <- paste('gzip -d ', tmpdest, sep='',collapse='')
-  system(cmd)
-  if (!quiet) cat('Loading data\n')
-
   csvfile <- strsplit(tmpdest, '\\.')[[1]][1]
+    .gunzip(tmpdest, csvfile)
+
+  if (!quiet) cat('Loading data\n')  
   dat <- read.csv(csvfile, header=TRUE)
   dat <- dat[,-c(2,6,8)]
 
@@ -169,7 +180,7 @@ get.assay <- function(aid, quiet=TRUE) {
   ## attributes
   if (!quiet) cat('Processing descriptions\n')
   desc <- get.assay.desc(aid)
-  if (is.null(desc)) warn("couldn't get description data'")
+  if (is.null(desc)) warning("couldn't get description data'")
 
   attr(dat, 'description') <- desc$assay.desc
   attr(dat, 'comments') <- desc$assay.comments
@@ -204,13 +215,13 @@ get.assay <- function(aid, quiet=TRUE) {
 
 
 .eh <- function() {
-  .itemNames <- c('CanonicalSmile', 'MolecularWeight', 'TotalFormalCharge',
+  .itemNames <- c('IUPACName','CanonicalSmile','MolecularFormula','MolecularWeight', 'TotalFormalCharge',
                   'XLogP', 'HydrogenBondDonorCount', 'HydrogenBondAcceptorCount',
                   'HeavyAtomCount', 'TPSA')
-  .types <- c('character', 'double', 'integer', 'double', 'integer', 'integer',
+  .types <- c('character','character','character', 'double', 'integer', 'double', 'integer', 'integer',
               'integer', 'double')
 
-  tmpdata <- data.frame(t(rep(0,9)))
+  tmpdata <- data.frame(t(rep(0,11)))
   validItem <- FALSE
   textval <- NA
 
@@ -225,7 +236,7 @@ get.assay <- function(aid, quiet=TRUE) {
     }
 
     if (name == 'Id') inId <<- TRUE
-    
+
     if (name == 'Item' && attr[['Name']] %in% .itemNames) {
       validItem <<- TRUE
       textval <<- NA
@@ -356,7 +367,7 @@ get.cid <- function(cid, quiet=TRUE, from.file=FALSE) {
   }
 
   list(startElement=startElement, endElement=endElement, text=text,
-       endDocument=endDocument, startDocument=startDocument, data=function() {tmpdata})
+       data=function() {tmpdata})
 }
 
 get.sid.list <- function(cid, quiet=TRUE, from.file=FALSE) {
@@ -401,4 +412,51 @@ get.sid <- function(sid, quiet=TRUE, from.file=FALSE) {
   dat <- eventhandlers$data()
   names(dat)[1] <- 'SID'
   dat
+}
+
+#####################################
+#
+# Contributed code
+#
+#####################################
+
+.find.compound.count <- function (compounds, quiet = TRUE) {
+  ## If list of Compounds, collapse into OR combined querystring
+  query <- paste (compounds, collapse ="+OR+")
+
+  if (!quiet) cat('Query: ', query, '\n')
+
+  ## Create search URL and download result
+  searchURL <- "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pccompound&tool=rpubchem&term="
+  url <- URLencode(paste(searchURL, query, sep = "", collapse = ""))
+  tmpdest <- "srch"
+  status <- try(download.file(url, destfile = tmpdest, method = "internal",
+                              mode = "wb", quiet = quiet), silent = TRUE)
+  if (class(status) == "try-error") {
+    stop("Couldn't perform search")
+  }
+
+  ## Parse XML and return vector of counts for each Term in Query Strings
+  xml <- xmlTreeParse(tmpdest)
+  root <- xmlRoot(xml)
+
+  ##
+  ## Results are scattered across two lists:
+  ## 1) TranslationStack/TermSet for Hits
+  ## 2) ErrorList for Misses
+  ## 
+  termlist <- sub ("([^[]*).*", "\\1", 
+                   sapply(xmlElementsByTagName(root, "Term", recursive = TRUE), xmlValue),
+                   perl=TRUE)
+  hitlist <- sapply(xmlElementsByTagName(root, "Count", recursive = TRUE), xmlValue)
+  counts <- sapply (compounds, function(x) {
+    if (length(which(termlist==x))==1) {
+      as.integer(hitlist[which(termlist==x)+1])
+    } else {
+      0
+    }
+  })
+
+  unlink(tmpdest)
+  counts
 }

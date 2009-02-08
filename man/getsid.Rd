@@ -24,17 +24,17 @@ get.sid(sid, quiet=TRUE, from.file=FALSE)
 }
 \value{
   A \code{data.frame} with 9 columns:
-  \itemize{
     \item{SID}{The substance ID}
+    \item{IUPACName}{The IUPAC name of the compound}
     \item{CanonicalSmiles}{The canonical SMILES for the compound}
     \item{MolecularWeight}{Molecular weight}
-    \item{TotalFormalCharge}{ }    
+    \item{TotalFormalCharge}{The formal charge}    
+    \item{MolecularFormula}{The molecular formula}  
     \item{TPSA}{Topological polar surface area}
     \item{HeavyAtomCount}{Heavy atom count}
     \item{FormalCharge}{Total formal charge}
     \item{HydrogenBondDonor}{Hydrogen bond donor count}
     \item{HydrogenBondAcceptor}{Hydrogen bond acceptor count}
-  }
 }
 \details{Processing a large number of substance ID's can take a long
   time. For large numbers of SID's the resultant XML file can be many

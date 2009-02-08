@@ -24,7 +24,7 @@ find.assay.id(query, quiet=TRUE)
 aids <- find.assay.id('yeast')
 
 ## get the description of the first 10 assays
-descs <- lapply( lapply(as.list(aids[1:10]), get.adesc), function(x)
+descs <- lapply( lapply(as.list(aids[1:10]), get.assay.desc), function(x)
 x$assay.desc )
 }
 }

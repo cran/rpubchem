@@ -21,7 +21,6 @@ get.assay.desc(aid)
 }
 \value{
   A \code{list} object with the following named components
-  \itemize{
     \item{assay.desc}{A short description of the assay}
     \item{assay.comments}{A \code{list} of comments for the assay}
     \item{types}{A \code{matrix} with 3 columns. The first column is the
@@ -29,7 +28,6 @@ get.assay.desc(aid)
       descriptions of each assay specific column. The final column lists
       the units for each of the assay specific columns. In case an assay
       column is unitless, the value of the unit for that column is \code{NA}}
-    }
 }
 \seealso{
 \code{\link{find.assay.id}}, \code{\link{get.assay}}

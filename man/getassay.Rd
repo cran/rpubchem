@@ -26,14 +26,12 @@ get.assay(aid, quiet=TRUE)
   A data frame with the observations in the rows. The number of columns
   varies from assay to assay. Any assay will, however, have the
   following columns:
-  \itemize{
     \item{PUBCHEM.SID}{PubChem SID}
     \item{PUBCHEM.CID}{PubChem CID}
     \item{PUBCHEM.ACTIVITY.OUTCOME}{Activity outcome}
     \item{PUBCHEM.ACTIVITY.SCORE}{Activity score, higher is more active}
     \item{PUBCHEM.ASSAYDATA.COMMENT}{Test result specific comment}
-  }
-  
+
   The activity outcome field is provided as a numeric but is recoded as
   described in the PubChem documentation. The remaining fields are
   obtained by parsing the description file for the corresponding assay.  

@@ -24,17 +24,17 @@ get.cid(cid, quiet=TRUE, from.file=FALSE)
 }
 \value{
   A \code{data.frame} with 9 columns:
-  \itemize{
     \item{CID}{The compound ID}
+    \item{IUPACName}{The IUPAC name of the compound}
     \item{CanonicalSmiles}{The canonical SMILES for the compound}
     \item{MolecularWeight}{Molecular weight}
-    \item{TotalFormalCharge}{ }    
+    \item{TotalFormalCharge}{The formal charge}    
+    \item{MolecularFormula}{The molecular formula}    
     \item{TPSA}{Topological polar surface area}
     \item{HeavyAtomCount}{Heavy atom count}
     \item{FormalCharge}{Total formal charge}
     \item{HydrogenBondDonor}{Hydrogen bond donor count}
     \item{HydrogenBondAcceptor}{Hydrogen bond acceptor count}
-  }
 }
 \details{Processing a large number of compound ID's can take a long
   time. For large numbers of CID's the resultant XML file can be many
