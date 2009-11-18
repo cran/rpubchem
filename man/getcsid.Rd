@@ -39,7 +39,7 @@ get.sid.list(cid, quiet=TRUE, from.file=FALSE)
 }
 \keyword{programming}
 
-\author{Rajarshi Guha \email{rguha@indiana.edu}}
+\author{Rajarshi Guha \email{rajarshi.guha@gmail.com}}
 \concept{PubChem}
 \concept{pubchem}
 \concept{compound}

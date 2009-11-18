@@ -33,7 +33,7 @@ get.assay.desc(aid)
 \code{\link{find.assay.id}}, \code{\link{get.assay}}
 }
 \keyword{programming}
-\author{Rajarshi Guha \email{rguha@indiana.edu}}
+\author{Rajarshi Guha \email{rajarshi.guha@gmail.com}}
 \concept{PubChem}
 \concept{pubchem}
 \concept{bioassay}
