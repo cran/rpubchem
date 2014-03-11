@@ -1,5 +1,9 @@
 require(XML)
 require(car)
+require(RJSONIO)
+
+.join <- function (x, delim = ",") 
+  paste(x, sep = "", collapse = delim)
 
 .uniqify <- function(x) {
   u <- unique(x)
@@ -35,21 +39,29 @@ require(car)
   close(ocon)
 }
 
+get.assay.summary <- function(aid) {
+  urlcon <- url(sprintf('http://pubchem.ncbi.nlm.nih.gov/rest/pug/assay/aid/%d/summary/JSON', as.integer(aid)))
+  j <- fromJSON(content=.join(readLines(urlcon), '\n'))
+  close(urlcon)
+  j <- j[[1]][[1]][[1]]
+  j$Comment <- .join(j$Comment, '\n')
+  j$Protocol <- .join(j$Protocol, '\n')
+  j$Description <- .join(j$Description, '\n')
+  return(j)
+}
+
 get.assay.desc <- function(aid) {
-  descURL <- 'ftp://ftp.ncbi.nlm.nih.gov/pubchem/Bioassay/CSV/Description/'
-  url <- paste(descURL,aid,'.descr.xml.gz', sep='', collapse='')  
+  url <- sprintf('http://pubchem.ncbi.nlm.nih.gov/rest/pug/assay/aid/%d/description/XML', as.integer(aid))
   tmpdest <- tempfile(pattern = 'adesc')
-  tmpdest <- paste(tmpdest, '.gz', sep='', collapse='')
 
   status <- try(download.file(url, destfile=tmpdest, method='internal', mode='wb', quiet=TRUE),
-      silent=TRUE)
+                silent=TRUE)
 
   if (class(status) == 'try-error') {
     return(NULL)
   }
 
   xmlfile <- strsplit(tmpdest, '\\.')[[1]][1]
-  .gunzip(tmpdest, xmlfile)
   xml <- xmlTreeParse(xmlfile, asTree=TRUE)
   root <- xmlRoot(xml)
 
@@ -108,12 +120,12 @@ get.assay.desc <- function(aid) {
 find.assay.id <- function(query, quiet=TRUE) {
   searchURL <- 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?tool=rpubchem&db=pcassay&term='
   url <- URLencode(paste(searchURL,query,sep='',collapse=''))
-  #tmpdest <- tempfile(pattern = 'search')
+                                        #tmpdest <- tempfile(pattern = 'search')
   tmpdest <- 'srch'
 
   ## first get the count of results
   status <- try(download.file(url, destfile=tmpdest, method='internal', mode='wb', quiet=quiet),
-      silent=TRUE)
+                silent=TRUE)
   if (class(status) == 'try-error') {
     stop("Couldn't perform search")
   }
@@ -126,9 +138,9 @@ find.assay.id <- function(query, quiet=TRUE) {
   }
 
   ## now get the results
-  url <- URLencode(paste(url, '&retmax=', count, sep='', collapse=''))
+  url <- sprintf("%s&retmax=%s", url, count)
   status <- try(download.file(url, destfile=tmpdest, method='internal', mode='wb', quiet=quiet),
-      silent=TRUE)
+                silent=TRUE)
 
   if (class(status) == 'try-error') {
     stop("Couldn't perform search")
@@ -147,26 +159,22 @@ find.assay.id <- function(query, quiet=TRUE) {
   ids
 }
 get.assay <- function(aid, quiet=TRUE) {
-  
-  baseURL <- 'ftp://ftp.ncbi.nlm.nih.gov/pubchem/Bioassay/CSV/Data/'
-  url <- paste(baseURL,aid,'.csv.gz', sep='', collapse='')
-
-  tmpdest <- tempfile(pattern = 'pcassay')
-  tmpdest <- paste(tmpdest, '.gz', sep='', collapse='')
-  status <- try(download.file(url, destfile=tmpdest, method='internal', mode='wb', quiet=quiet),
-      silent=TRUE)
-
-  if (class(status) == 'try-error') {
-    stop("Error in the download")
+  ## Lets see how many SID's we're going to pull down
+  as <- get.assay.summary(aid)
+  nsid <- as$SIDCountAll
+  if (nsid > 8000) {
+    .getAssay(aid, quiet)
+  } else {
+    .getAssay(aid, quiet)
   }
-  if (!quiet) cat("Got data file\n")
+}
 
-  csvfile <- strsplit(tmpdest, '\\.')[[1]][1]
-    .gunzip(tmpdest, csvfile)
+.getAssay <- function(aid, quiet=TRUE) {
+  qurl <- sprintf("http://pubchem.ncbi.nlm.nih.gov/rest/pug/assay/aid/%d/CSV", as.numeric(aid))
+  urlcon <- url(qurl)
+  dat <- read.csv(urlcon, header=TRUE, as.is=TRUE)
 
-  if (!quiet) cat('Loading data\n')  
-  dat <- read.csv(csvfile, header=TRUE)
-  dat <- dat[,-c(2,6,8)]
+  if (!quiet) cat('Loaded data\n')  
 
   ## get rid of underscores in the names
   n <- names(dat)
@@ -190,16 +198,14 @@ get.assay <- function(aid, quiet=TRUE) {
   }
   attr(dat, 'types') <- types
   
-  names(dat)[6:ncol(dat)] <- desc$types[,1]
+  names(dat)[7:ncol(dat)] <- desc$types[,1]
 
-
-  unlink(csvfile)
   dat
 }
 
 .get.xml.file <- function(url, dest, quiet) {
   status <- try(download.file(url, destfile=dest, method='internal', mode='wb', quiet=quiet),
-      silent=TRUE)
+                silent=TRUE)
 
   if (class(status) == 'try-error') {
     stop("Error in the download")
@@ -208,14 +214,14 @@ get.assay <- function(aid, quiet=TRUE) {
 
 
 #################################
-#
-# Get compound data
-#
+##
+## Get compound data
+##
 #################################
 
 
 .eh <- function() {
-  .itemNames <- c('IUPACName','CanonicalSmile','MolecularFormula','MolecularWeight', 'TotalFormalCharge',
+  .itemNames <- c('IUPACName','CanonicalSmiles','MolecularFormula','MolecularWeight', 'TotalFormalCharge',
                   'XLogP', 'HydrogenBondDonorCount', 'HydrogenBondAcceptorCount',
                   'HeavyAtomCount', 'TPSA')
   .types <- c('character','character','character', 'double', 'integer', 'double', 'integer', 'integer',
@@ -307,9 +313,9 @@ get.cid <- function(cid, quiet=TRUE, from.file=FALSE) {
 }
 
 #################################################
-#
-# Get substance associations from compound data
-#
+                                        #
+                                        # Get substance associations from compound data
+                                        #
 #################################################
 .csideh <- function() {
   
@@ -390,9 +396,9 @@ get.sid.list <- function(cid, quiet=TRUE, from.file=FALSE) {
 }
 
 #################################
-#
-# Get substance data
-#
+##
+## Get substance data
+##
 #################################
 get.sid <- function(sid, quiet=TRUE, from.file=FALSE) {
 
@@ -415,9 +421,9 @@ get.sid <- function(sid, quiet=TRUE, from.file=FALSE) {
 }
 
 #####################################
-#
-# Contributed code
-#
+##
+## Contributed code
+##
 #####################################
 
 .find.compound.count <- function (compounds, quiet = TRUE) {
