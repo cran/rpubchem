@@ -1,6 +1,6 @@
 Package: rpubchem
-Version: 1.5.0.1
-Date: 2014-03-11
+Version: 1.5.0.2
+Date: 2014-04-24
 Title: rpubchem - Interface to the PubChem Collection
 Author: Rajarshi Guha <rajarshi.guha@gmail.com>
 Maintainer: Rajarshi Guha <rajarshi.guha@gmail.com>
@@ -15,7 +15,7 @@ Description: Access PubChem data (compounds, substance, assays).
         is also possible to search for assay ID's by keyword. Currently
         the main limitation is that only 1000 molecules can be
         downloaded at a time from the PubChem servers
-Packaged: 2014-03-11 13:20:06 UTC; guhar
+Packaged: 2014-04-24 12:57:31 UTC; guhar
 NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2014-03-11 15:19:36
+Date/Publication: 2014-04-24 15:23:55
