@@ -44,7 +44,25 @@
   </PCT-Data_input>
 </PCT-Data>'
 
-get.aid.by.cid <- function(cid, type='raw', quiet=TRUE) {
+get.aid.by.cid <- function(cid, type='tested', quiet=TRUE) {
+
+  if (!(type %in% c('tested','active','inactive')))
+      stop("Invalid type specified")
+
+  if (type == 'tested') type <- 'all'
+  url <- sprintf('https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/%d/aids/JSON?aids_type=%s', cid, type)
+  if (!quiet) {
+    cat("Retrieving from:", url, "\n")
+  }
+  page <- .read.url(url)
+  if (is.null(page)) {
+    warning(sprintf("No data found for %d", cid))
+    return(NULL)
+  }
+  fromJSON(content=page)$InformationList$Information[[1]]$AID
+}
+
+.get.aid.by.cid.old <- function(cid, type='raw', quiet=TRUE) {
 
   if (!(type %in% c('tested','active','inactive','discrepant','raw')))
       stop("Invalid type specified")
@@ -69,19 +87,8 @@ get.aid.by.cid <- function(cid, type='raw', quiet=TRUE) {
   reqid <- xmlValue(reqid[[1]])
 
   ## start polling
-  pstring <- gsub("\\n", "", sprintf(.pollString, reqid))
-  reqid <- NA
-  while(TRUE) {
-    h = basicTextGatherer()
-    curlPerform(url = 'http://pubchem.ncbi.nlm.nih.gov/pug/pug.cgi',
-                postfields = pstring,
-                writefunction = h$update)
-    ## see if we got a waiting response
-    root <- xmlRoot(xmlTreeParse(h$value(), asText=TRUE, asTree=TRUE))
-    reqid <- xmlElementsByTagName(root, 'PCT-Waiting', recursive=TRUE)
-    if (length(reqid) != 0) next
-    break
-  }
+  if (!quiet) cat("Starting polling using reqid:", reqid, "\n")
+  root <- .poll.pubchem(reqid)
 
   ## OK, got the link to our result
   link <- xmlElementsByTagName(root, 'PCT-Download-URL_url', recursive=TRUE)
@@ -90,7 +97,8 @@ get.aid.by.cid <- function(cid, type='raw', quiet=TRUE) {
     return(NULL)
   }
   link <- xmlValue(link[[1]])
-
+  if (!quiet) cat("Got link to download:", link, "\n")
+  
   ## OK, get data file
   tmpdest <- tempfile(pattern = 'abyc')
   tmpdest <- paste(tmpdest, '.gz', sep='', collapse='')
@@ -105,24 +113,19 @@ get.aid.by.cid <- function(cid, type='raw', quiet=TRUE) {
   }
 
   ## OK, load the data
-  csvfile <- strsplit(tmpdest, '\\.')[[1]][1]
-  .gunzip(tmpdest, csvfile)
-  dat <- read.csv(csvfile,header=TRUE,fill=TRUE,
-                  quote='', row.names=NULL)
+  dat <- read.csv(tmpdest,header=TRUE,fill=TRUE,row.names=NULL)
   unlink(tmpdest)
 
   valid.rows <- grep("^[[:digit:]]*$", dat[,1])
-  dat <- dat[valid.rows,1:5]
+  dat <- dat[valid.rows,c(1,3,4,5)]
   row.names(dat) <- 1:nrow(dat)
-  for (i in 1:5) dat[,i] <- as.numeric(as.character(dat[,i]))
-  names(dat) <- c('aid', 'active', 'inactive', 'descrepant', 'tested')
+  names(dat) <- c('aid', 'active', 'inactive', 'tested')
   ret <- dat
 
   type <- type[1]
   switch(type,
          active = dat[dat$active == 1,1],
          inactive = dat[dat$inactive == 1,1],
-         discrepant = dat[dat$discrepant == 1,1],
          tested = dat[,1],
          raw = ret[,-5])
 }
